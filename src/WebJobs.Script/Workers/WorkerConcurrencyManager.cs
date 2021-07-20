@@ -157,9 +157,9 @@ namespace Microsoft.Azure.WebJobs.Script.Workers
 
         internal bool IsOverloaded(WorkerStatus status)
         {
-            if (status.RpcWorkerStats.LatencyHistory.Count() >= _concurrencyOptions.Value.HistorySize)
+            if (status.WorkerStats.LatencyHistory.Count() >= _concurrencyOptions.Value.HistorySize)
             {
-                int overloadedCount = status.RpcWorkerStats.LatencyHistory.Where(x => x.TotalMilliseconds >= _concurrencyOptions.Value.LatencyThreshold.TotalMilliseconds).Count();
+                int overloadedCount = status.WorkerStats.LatencyHistory.Where(x => x.TotalMilliseconds >= _concurrencyOptions.Value.LatencyThreshold.TotalMilliseconds).Count();
                 double proportion = (double)overloadedCount / _concurrencyOptions.Value.HistorySize;
 
                 return proportion >= _concurrencyOptions.Value.HistoryThreshold;
@@ -170,31 +170,21 @@ namespace Microsoft.Azure.WebJobs.Script.Workers
         internal string LogWorkerState(WorkerDescription desc)
         {
             string formattedLoadHistory = string.Empty, formattedLatencyHistory = string.Empty;
-            double cpuAvg = 0, cpuMax = 0, latencyAvg = 0, latencyMax = 0;
+            double latencyAvg = 0, latencyMax = 0;
             if (desc.WorkerStatus != null)
             {
-                if (desc.WorkerStatus.ProcessStats != null && desc.WorkerStatus.ProcessStats.CpuLoadHistory != null)
+                if (desc.WorkerStatus.WorkerStats != null && desc.WorkerStatus.WorkerStats.LatencyHistory != null)
                 {
-                    formattedLatencyHistory = string.Join(",", desc.WorkerStatus.ProcessStats.CpuLoadHistory);
-                    cpuMax = desc.WorkerStatus.ProcessStats.CpuLoadHistory.Max();
-                    if (desc.WorkerStatus.ProcessStats.CpuLoadHistory.Count() > 1)
+                    formattedLatencyHistory = string.Join(",", desc.WorkerStatus.WorkerStats.LatencyHistory);
+                    latencyMax = desc.WorkerStatus.WorkerStats.LatencyHistory.Select(x => x.TotalMilliseconds).Max();
+                    if (desc.WorkerStatus.WorkerStats.LatencyHistory.Count() > 1)
                     {
-                        cpuAvg = desc.WorkerStatus.ProcessStats.CpuLoadHistory.Average();
-                    }
-                }
-                if (desc.WorkerStatus.RpcWorkerStats != null && desc.WorkerStatus.RpcWorkerStats.LatencyHistory != null)
-                {
-                    formattedLatencyHistory = string.Join(",", desc.WorkerStatus.RpcWorkerStats.LatencyHistory);
-                    latencyMax = desc.WorkerStatus.RpcWorkerStats.LatencyHistory.Select(x => x.TotalMilliseconds).Max();
-                    if (desc.WorkerStatus.RpcWorkerStats.LatencyHistory.Count() > 1)
-                    {
-                        latencyAvg = desc.WorkerStatus.RpcWorkerStats.LatencyHistory.Select(x => x.TotalMilliseconds).Average();
+                        latencyAvg = desc.WorkerStatus.WorkerStats.LatencyHistory.Select(x => x.TotalMilliseconds).Average();
                     }
                 }
             }
 
-            return $@"Worker process stats: ProcessId={desc.WorkerId}, Overloaded={desc.Overloaded}
-CpuLoadHistory=({formattedLoadHistory}), c={cpuAvg}, MaxLoad={cpuMax}, 
+            return $@"Worker process stats: ProcessId={desc.WorkerId}, Overloaded={desc.Overloaded} 
 LatencyHistory=({formattedLatencyHistory}), AvgLatency={latencyAvg}, MaxLatency={latencyMax}";
         }
 

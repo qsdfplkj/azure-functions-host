@@ -20,12 +20,7 @@ namespace Microsoft.Azure.WebJobs.Script.Workers
         /// <summary>
         /// Gets or sets the worker latency statistic.
         /// </summary>
-        public WorkerStats RpcWorkerStats { get; set; }
-
-        /// <summary>
-        /// Gets or sets the process statistics for the worker process.
-        /// </summary>
-        public ProcessStats ProcessStats { get; set; }
+        public WorkerStats WorkerStats { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether worker is ready

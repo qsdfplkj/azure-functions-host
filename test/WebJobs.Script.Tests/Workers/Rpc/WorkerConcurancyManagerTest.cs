@@ -275,15 +275,11 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
 
             WorkerStatus status = new WorkerStatus()
             {
-                RpcWorkerStats = new WorkerStats()
+                WorkerStats = new WorkerStats()
                 {
                     LatencyHistory = latencies.Select(x => TimeSpan.FromMilliseconds(x))
                 }
             };
-
-            if (concurrancyManger.IsOverloaded(status) != expected)
-            {
-            }
 
             Assert.Equal(concurrancyManger.IsOverloaded(status), expected);
         }
@@ -303,7 +299,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
             workerStatuses.Add("test1", new WorkerStatus()
             {
                 IsReady = readyForInvocations1,
-                RpcWorkerStats = new WorkerStats()
+                WorkerStats = new WorkerStats()
                 {
                     LatencyHistory = latencies1.Select(x => TimeSpan.FromMilliseconds(x))
                 }
@@ -311,7 +307,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
             workerStatuses.Add("test2", new WorkerStatus()
             {
                 IsReady = readyForInvocations2,
-                RpcWorkerStats = new WorkerStats()
+                WorkerStats = new WorkerStats()
                 {
                     LatencyHistory = latencies2.Select(x => TimeSpan.FromMilliseconds(x))
                 }

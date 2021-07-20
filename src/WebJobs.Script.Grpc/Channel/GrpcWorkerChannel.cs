@@ -182,7 +182,7 @@ namespace Microsoft.Azure.WebJobs.Script.Grpc
             if (_concurrencyOptions.Value.Enabled)
             {
                 workerStatus.IsReady = IsChannelReadyForInvocations();
-                workerStatus.RpcWorkerStats = _monitor.GetStats();
+                workerStatus.WorkerStats = _monitor.GetStats();
             }
 
             return workerStatus;
