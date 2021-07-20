@@ -3,6 +3,7 @@
 
 using System;
 using Microsoft.Azure.WebJobs.Script.Scale;
+using Microsoft.Azure.WebJobs.Script.Workers.Rpc;
 
 namespace Microsoft.Azure.WebJobs.Script.Workers
 {
@@ -15,5 +16,20 @@ namespace Microsoft.Azure.WebJobs.Script.Workers
         /// Gets or sets the current latency for worker channel.
         /// </summary>
         public TimeSpan Latency { get; set; }
+
+        /// <summary>
+        /// Gets or sets the worker latency statistic.
+        /// </summary>
+        public WorkerStats RpcWorkerStats { get; set; }
+
+        /// <summary>
+        /// Gets or sets the process statistics for the worker process.
+        /// </summary>
+        public ProcessStats ProcessStats { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether worker is ready
+        /// </summary>
+        public bool IsReady { get; set; }
     }
 }
