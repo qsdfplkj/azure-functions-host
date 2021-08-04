@@ -1,0 +1,12 @@
+﻿// see type ExtensionStartupTypeRequirement for notes on how these settings are used.
+{
+  "types": [
+    {
+      "name": "AzureStorageWebJobsStartup",
+      "assemblyName": "Microsoft.Azure.WebJobs.Extensions.Storage",
+      "packageName": "Microsoft.Azure.WebJobs.Extensions.Storage",
+      "minimumAssemblyVersion": "4.0.4.0",
+      "minimumPackageVersion": "4.0.4"
+    }
+  ]
+}

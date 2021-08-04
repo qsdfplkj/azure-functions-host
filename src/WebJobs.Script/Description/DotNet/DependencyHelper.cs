@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Microsoft.Azure.WebJobs.Script.ExtensionRequirements;
 using Microsoft.Extensions.DependencyModel;
 using Newtonsoft.Json.Linq;
 using static Microsoft.DotNet.PlatformAbstractions.RuntimeEnvironment;
@@ -87,6 +88,16 @@ namespace Microsoft.Azure.WebJobs.Script.Description
 
             return assemblies["runtimeAssemblies"]
                 .ToObject<ScriptRuntimeAssembly[]>()
+                .ToDictionary(a => a.Name, StringComparer.OrdinalIgnoreCase);
+        }
+
+        internal static Dictionary<string, ExtensionStartupTypeRequirement> GetExtensionRequirements()
+        {
+            string requirementsJson = GetResourceFileContents("extensionrequirements.json");
+            JObject requirements = JObject.Parse(requirementsJson);
+
+            return requirements["types"]
+                .ToObject<ExtensionStartupTypeRequirement[]>()
                 .ToDictionary(a => a.Name, StringComparer.OrdinalIgnoreCase);
         }
 

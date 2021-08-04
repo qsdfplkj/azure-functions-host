@@ -11,6 +11,7 @@ using Microsoft.Azure.WebJobs.Script.Description;
 using Microsoft.Azure.WebJobs.Script.Diagnostics;
 using Microsoft.Azure.WebJobs.Script.Diagnostics.Extensions;
 using Microsoft.Azure.WebJobs.Script.ExtensionBundle;
+using Microsoft.Azure.WebJobs.Script.ExtensionRequirements;
 using Microsoft.Azure.WebJobs.Script.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -31,6 +32,7 @@ namespace Microsoft.Azure.WebJobs.Script.DependencyInjection
         private readonly IMetricsLogger _metricsLogger;
         private readonly Lazy<IEnumerable<Type>> _startupTypes;
 
+        private static readonly Dictionary<string, ExtensionStartupTypeRequirement> _extensionRequirements = DependencyHelper.GetExtensionRequirements();
         private static string[] _builtinExtensionAssemblies = GetBuiltinExtensionAssemblies();
 
         public ScriptStartupTypeLocator(string rootScriptPath, ILogger<ScriptStartupTypeLocator> logger, IExtensionBundleManager extensionBundleManager,
@@ -182,6 +184,8 @@ namespace Microsoft.Azure.WebJobs.Script.DependencyInjection
                         continue;
                     }
 
+                    ValidateExtensionRequirements(extensionType);
+
                     startupTypes.Add(extensionType);
                 }
             }
@@ -216,6 +220,23 @@ namespace Microsoft.Azure.WebJobs.Script.DependencyInjection
                     _logger.ScriptStartUpUnableParseMetadata(exc, metadataFilePath);
 
                     return Array.Empty<ExtensionReference>();
+                }
+            }
+        }
+
+        private void ValidateExtensionRequirements(Type extensionType)
+        {
+            if (_extensionRequirements.ContainsKey(extensionType.Name))
+            {
+                Version extensionAssemblyVersion = extensionType.Assembly.GetName().Version;
+                string extensionAssemblySimpleName = extensionType.Assembly.GetName().Name;
+
+                ExtensionStartupTypeRequirement requirement = _extensionRequirements[extensionType.Name];
+                Version minimumAssemblyVersion = new Version(requirement.MinimumAssemblyVersion);
+
+                if (extensionAssemblySimpleName == requirement.AssemblyName && extensionAssemblyVersion < minimumAssemblyVersion)
+                {
+                    throw new HostInitializationException($"ExtensionStartupType '{extensionType.Name}' from assembly '{extensionType.Assembly.FullName}' does not meet the required minimum version of '{minimumAssemblyVersion}'. Update your NuGet package reference for '{requirement.PackageName}' to '{requirement.MinimumPackageVersion}' or later. For more information see https://aka.ms/func-min-extension-versions.");
                 }
             }
         }
