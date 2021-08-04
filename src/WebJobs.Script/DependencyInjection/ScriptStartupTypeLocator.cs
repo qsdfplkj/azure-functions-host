@@ -32,7 +32,7 @@ namespace Microsoft.Azure.WebJobs.Script.DependencyInjection
         private readonly IMetricsLogger _metricsLogger;
         private readonly Lazy<IEnumerable<Type>> _startupTypes;
 
-        private static readonly Dictionary<string, ExtensionStartupTypeRequirement> _extensionRequirements = DependencyHelper.GetExtensionRequirements();
+        private static readonly ExtensionRequirementsInfo _extensionRequirements = DependencyHelper.GetExtensionRequirements();
         private static string[] _builtinExtensionAssemblies = GetBuiltinExtensionAssemblies();
 
         public ScriptStartupTypeLocator(string rootScriptPath, ILogger<ScriptStartupTypeLocator> logger, IExtensionBundleManager extensionBundleManager,
@@ -75,6 +75,9 @@ namespace Microsoft.Azure.WebJobs.Script.DependencyInjection
 
             if (bundleConfigured)
             {
+                var bundleDetails = await _extensionBundleManager.GetExtensionBundleDetails();
+                ValidateBundleRequirements(bundleDetails);
+
                 bindingsSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                 // Generate a Hashset of all the binding types used in the function app
@@ -224,15 +227,30 @@ namespace Microsoft.Azure.WebJobs.Script.DependencyInjection
             }
         }
 
+        private void ValidateBundleRequirements(ExtensionBundleDetails bundleDetails)
+        {
+            if (_extensionRequirements.BundleRequirementsByBundleId.ContainsKey(bundleDetails.Id))
+            {
+                BundleRequirement requirement = _extensionRequirements.BundleRequirementsByBundleId[bundleDetails.Id];
+                var bundleVersion = new Version(bundleDetails.Version);
+                var minimumVersion = new Version(requirement.MinimumVersion);
+
+                if (bundleVersion < minimumVersion)
+                {
+                    throw new HostInitializationException($"Referenced bundle '{bundleDetails.Id}' of version '{bundleDetails.Version}' does not meet the required minimum version of '{minimumVersion}'. Update your extension bundle reference in host.json to reference '{requirement.MinimumVersion}' or later. For more information see https://aka.ms/func-min-bundle-versions.");
+                }
+            }
+        }
+
         private void ValidateExtensionRequirements(Type extensionType)
         {
-            if (_extensionRequirements.ContainsKey(extensionType.Name))
+            if (_extensionRequirements.ExtensionRequirementsByStartupType.ContainsKey(extensionType.Name))
             {
+                ExtensionStartupTypeRequirement requirement = _extensionRequirements.ExtensionRequirementsByStartupType[extensionType.Name];
+                Version minimumAssemblyVersion = new Version(requirement.MinimumAssemblyVersion);
+
                 Version extensionAssemblyVersion = extensionType.Assembly.GetName().Version;
                 string extensionAssemblySimpleName = extensionType.Assembly.GetName().Name;
-
-                ExtensionStartupTypeRequirement requirement = _extensionRequirements[extensionType.Name];
-                Version minimumAssemblyVersion = new Version(requirement.MinimumAssemblyVersion);
 
                 if (extensionAssemblySimpleName == requirement.AssemblyName && extensionAssemblyVersion < minimumAssemblyVersion)
                 {

@@ -1,5 +1,11 @@
 ﻿// see type ExtensionStartupTypeRequirement for notes on how these settings are used.
 {
+  "bundles": [
+    {
+      "id": "Microsoft.Azure.Functions.ExtensionBundle",
+      "minimumVersion": "2.2.0"
+    }
+  ],
   "types": [
     {
       "name": "AzureStorageWebJobsStartup",

@@ -91,14 +91,18 @@ namespace Microsoft.Azure.WebJobs.Script.Description
                 .ToDictionary(a => a.Name, StringComparer.OrdinalIgnoreCase);
         }
 
-        internal static Dictionary<string, ExtensionStartupTypeRequirement> GetExtensionRequirements()
+        internal static ExtensionRequirementsInfo GetExtensionRequirements()
         {
             string requirementsJson = GetResourceFileContents("extensionrequirements.json");
             JObject requirements = JObject.Parse(requirementsJson);
 
-            return requirements["types"]
-                .ToObject<ExtensionStartupTypeRequirement[]>()
-                .ToDictionary(a => a.Name, StringComparer.OrdinalIgnoreCase);
+            var bundleRequirements = requirements["bundles"]
+                .ToObject<BundleRequirement[]>();
+
+            var extensionRequirements = requirements["types"]
+                .ToObject<ExtensionStartupTypeRequirement[]>();
+
+            return new ExtensionRequirementsInfo(bundleRequirements, extensionRequirements);
         }
 
         /// <summary>
