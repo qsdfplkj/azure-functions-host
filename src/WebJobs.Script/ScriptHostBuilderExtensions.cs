@@ -36,7 +36,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Logging.Configuration;
+using Microsoft.Extensions.Logging.Console;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.Azure.WebJobs.Script
@@ -80,16 +80,20 @@ namespace Microsoft.Azure.WebJobs.Script
             // Host configuration
             builder.ConfigureLogging((context, loggingBuilder) =>
             {
-                loggingBuilder.AddDefaultWebJobsFilters();
+                loggingBuilder.SetMinimumLevel(LogLevel.Debug);
 
-                string loggingPath = ConfigurationPath.Combine(ConfigurationSectionNames.JobHost, "Logging");
-                loggingBuilder.AddConfiguration(context.Configuration.GetSection(loggingPath));
+                //loggingBuilder.AddDefaultWebJobsFilters();
+
+                //string loggingPath = ConfigurationPath.Combine(ConfigurationSectionNames.JobHost, "Logging");
+                //loggingBuilder.AddConfiguration(context.Configuration.GetSection(loggingPath));
 
                 loggingBuilder.Services.AddSingleton<IFileWriterFactory, DefaultFileWriterFactory>();
                 loggingBuilder.Services.AddSingleton<ILoggerProvider, HostFileLoggerProvider>();
                 loggingBuilder.Services.AddSingleton<ILoggerProvider, FunctionFileLoggerProvider>();
 
-                loggingBuilder.AddConsoleIfEnabled(context);
+                //loggingBuilder.AddConsoleIfEnabled(context);
+                loggingBuilder.AddConsole();
+                loggingBuilder.AddFilter<ConsoleLoggerProvider>(null, LogLevel.Trace);
 
                 ConfigureApplicationInsights(context, loggingBuilder);
             })
