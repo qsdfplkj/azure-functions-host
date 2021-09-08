@@ -187,11 +187,11 @@ namespace Microsoft.Azure.WebJobs.Script.DependencyInjection
                         continue;
                     }
 
-                    ValidateExtensionRequirements(extensionType);
-
                     startupTypes.Add(extensionType);
                 }
             }
+
+            ValidateExtensionRequirements(startupTypes);
 
             return startupTypes;
         }
@@ -242,20 +242,37 @@ namespace Microsoft.Azure.WebJobs.Script.DependencyInjection
             }
         }
 
-        private void ValidateExtensionRequirements(Type extensionType)
+        private void ValidateExtensionRequirements(List<Type> startupTypes)
         {
-            if (_extensionRequirements.ExtensionRequirementsByStartupType.ContainsKey(extensionType.Name))
+            var errors = new List<string>();
+            foreach (var extensionType in startupTypes)
             {
-                ExtensionStartupTypeRequirement requirement = _extensionRequirements.ExtensionRequirementsByStartupType[extensionType.Name];
-                Version minimumAssemblyVersion = new Version(requirement.MinimumAssemblyVersion);
-
-                Version extensionAssemblyVersion = extensionType.Assembly.GetName().Version;
-                string extensionAssemblySimpleName = extensionType.Assembly.GetName().Name;
-
-                if (extensionAssemblySimpleName == requirement.AssemblyName && extensionAssemblyVersion < minimumAssemblyVersion)
+                if (_extensionRequirements.ExtensionRequirementsByStartupType.ContainsKey(extensionType.Name))
                 {
-                    throw new HostInitializationException($"ExtensionStartupType '{extensionType.Name}' from assembly '{extensionType.Assembly.FullName}' does not meet the required minimum version of '{minimumAssemblyVersion}'. Update your NuGet package reference for '{requirement.PackageName}' to '{requirement.MinimumPackageVersion}' or later. For more information see https://aka.ms/func-min-extension-versions.");
+                    ExtensionStartupTypeRequirement requirement = _extensionRequirements.ExtensionRequirementsByStartupType[extensionType.Name];
+                    Version minimumAssemblyVersion = new Version(requirement.MinimumAssemblyVersion);
+
+                    Version extensionAssemblyVersion = extensionType.Assembly.GetName().Version;
+                    string extensionAssemblySimpleName = extensionType.Assembly.GetName().Name;
+
+                    if (extensionAssemblySimpleName == requirement.AssemblyName && extensionAssemblyVersion < minimumAssemblyVersion)
+                    {
+                        var requirementNotMetError = $"ExtensionStartupType '{extensionType.Name}' from assembly '{extensionType.Assembly.FullName}' does not meet the required minimum version of '{minimumAssemblyVersion}'. Update your NuGet package reference for '{requirement.PackageName}' to '{requirement.MinimumPackageVersion}' or later.";
+                        errors.Add(requirementNotMetError);
+                    }
                 }
+            }
+
+            if (errors.Count > 0)
+            {
+                var builder = new System.Text.StringBuilder();
+                builder.AppendLine("Some loaded extensions do not meet the minimum requirements. For more information see https://aka.ms/func-min-extension-versions.");
+                foreach (string e in errors)
+                {
+                    builder.AppendLine(e);
+                }
+
+                throw new HostInitializationException(builder.ToString());
             }
         }
 
