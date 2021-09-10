@@ -3,7 +3,7 @@
   "bundles": [
     {
       "id": "Microsoft.Azure.Functions.ExtensionBundle",
-      "minimumVersion": "2.2.0"
+      "minimumVersion": "2.7.0"
     }
   ],
   "types": [
@@ -13,6 +13,55 @@
       "packageName": "Microsoft.Azure.WebJobs.Extensions.Storage",
       "minimumAssemblyVersion": "4.0.4.0",
       "minimumPackageVersion": "4.0.4"
+    },
+    {
+      "name": "ServiceBusWebJobsStartup",
+      "assemblyName": "Microsoft.Azure.WebJobs.ServiceBus",
+      "packageName": "Microsoft.Azure.WebJobs.Extensions.ServiceBus",
+      "minimumAssemblyVersion": "4.3.0.0",
+      "minimumPackageVersion": "4.3.0"
+    },
+    {
+      "name": "EventHubsWebJobsStartup",
+      "assemblyName": "Microsoft.Azure.WebJobs.EventHubs",
+      "packageName": "Microsoft.Azure.WebJobs.Extensions.EventHubs",
+      "minimumAssemblyVersion": "4.2.0.0",
+      "minimumPackageVersion": "4.2.0"
+    },
+    {
+      "name": "CosmosDBWebJobsStartup",
+      "assemblyName": "Microsoft.Azure.WebJobs.Extensions.CosmosDB",
+      "packageName": "Microsoft.Azure.WebJobs.Extensions.CosmosDB",
+      "minimumAssemblyVersion": "3.0.10.0",
+      "minimumPackageVersion": "3.0.10.0"
+    },
+    {
+      "name": "DurableTaskWebJobsStartup",
+      "assemblyName": "Microsoft.Azure.WebJobs.Extensions.DurableTask",
+      "packageName": "Microsoft.Azure.WebJobs.Extensions.DurableTask",
+      "minimumAssemblyVersion": "2.0.0.0",
+      "minimumPackageVersion": "2.5.0"
+    },
+    {
+      "name": "EventGridWebJobsStartup",
+      "assemblyName": "Microsoft.Azure.WebJobs.Extensions.EventGrid",
+      "packageName": "Microsoft.Azure.WebJobs.Extensions.EventGrid",
+      "minimumAssemblyVersion": "2.0.0.0",
+      "minimumPackageVersion": "2.1.0"
+    },
+    {
+      "name": "RabbitMQWebJobsStartup",
+      "assemblyName": "WebJobs.Extensions.RabbitMQ",
+      "packageName": "Microsoft.Azure.WebJobs.Extensions.RabbitMQ",
+      "minimumAssemblyVersion": "1.0.0.0",
+      "minimumPackageVersion": "1.0.0"
+    },
+    {
+      "name": "KafkaWebJobsStartup",
+      "assemblyName": "Microsoft.Azure.WebJobs.Extensions.Kafka",
+      "packageName": "Microsoft.Azure.WebJobs.Extensions.Kafka",
+      "minimumAssemblyVersion": "3.3.2.0",
+      "minimumPackageVersion": "3.3.2"
     }
   ]
 }

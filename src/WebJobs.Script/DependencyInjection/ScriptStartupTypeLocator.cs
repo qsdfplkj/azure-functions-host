@@ -237,7 +237,8 @@ namespace Microsoft.Azure.WebJobs.Script.DependencyInjection
 
                 if (bundleVersion < minimumVersion)
                 {
-                    throw new HostInitializationException($"Referenced bundle '{bundleDetails.Id}' of version '{bundleDetails.Version}' does not meet the required minimum version of '{minimumVersion}'. Update your extension bundle reference in host.json to reference '{requirement.MinimumVersion}' or later. For more information see https://aka.ms/func-min-bundle-versions.");
+                    _logger.MinimumBundleVersionNotSatisfied(bundleDetails.Id, bundleDetails.Version, requirement.MinimumVersion);
+                    throw new HostInitializationException($"Referenced bundle {bundleDetails.Id} of version {bundleDetails.Version} does not meet the required minimum version of {requirement.MinimumVersion}. Update your extension bundle reference in host.json to reference {requirement.MinimumVersion} or later. For more information see https://aka.ms/func-min-bundle-versions.");
                 }
             }
         }
@@ -255,9 +256,16 @@ namespace Microsoft.Azure.WebJobs.Script.DependencyInjection
                     Version extensionAssemblyVersion = extensionType.Assembly.GetName().Version;
                     string extensionAssemblySimpleName = extensionType.Assembly.GetName().Name;
 
-                    if (extensionAssemblySimpleName == requirement.AssemblyName && extensionAssemblyVersion < minimumAssemblyVersion)
+                    if (extensionAssemblySimpleName != requirement.AssemblyName)
                     {
-                        var requirementNotMetError = $"ExtensionStartupType '{extensionType.Name}' from assembly '{extensionType.Assembly.FullName}' does not meet the required minimum version of '{minimumAssemblyVersion}'. Update your NuGet package reference for '{requirement.PackageName}' to '{requirement.MinimumPackageVersion}' or later.";
+                        // We recognized this type, but it did not come from the assembly that we expect, skipping validation
+                        continue;
+                    }
+
+                    if (extensionAssemblyVersion < minimumAssemblyVersion)
+                    {
+                        _logger.MinimumExtensionVersionNotSatisfied(extensionType.Name, extensionType.Assembly.FullName, minimumAssemblyVersion, requirement.PackageName, requirement.MinimumPackageVersion);
+                        string requirementNotMetError = $"ExtensionStartupType {extensionType.Name} from assembly '{extensionType.Assembly.FullName}' does not meet the required minimum version of {minimumAssemblyVersion}. Update your NuGet package reference for {requirement.PackageName} to {requirement.MinimumPackageVersion} or later.";
                         errors.Add(requirementNotMetError);
                     }
                 }
@@ -266,7 +274,7 @@ namespace Microsoft.Azure.WebJobs.Script.DependencyInjection
             if (errors.Count > 0)
             {
                 var builder = new System.Text.StringBuilder();
-                builder.AppendLine("Some loaded extensions do not meet the minimum requirements. For more information see https://aka.ms/func-min-extension-versions.");
+                builder.AppendLine("One or more loaded extensions do not meet the minimum requirements. For more information see https://aka.ms/func-min-extension-versions.");
                 foreach (string e in errors)
                 {
                     builder.AppendLine(e);
