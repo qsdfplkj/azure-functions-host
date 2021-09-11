@@ -29,9 +29,9 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
         private readonly IRpcWorkerChannelFactory _rpcWorkerChannelFactory;
         private readonly IEnvironment _environment;
         private readonly IApplicationLifetime _applicationLifetime;
-        private readonly SemaphoreSlim _startWorkerProcessSLock = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _startWorkerProcessLock = new SemaphoreSlim(1, 1);
         private readonly TimeSpan _thresholdBetweenRestarts = TimeSpan.FromMinutes(WorkerConstants.WorkerRestartErrorIntervalThresholdInMinutes);
-        private readonly IOptions<WorkerConcurrencyOptions> _concurrencyOptions;
+        private readonly IOptions<WorkerConcurrencyOptions> _workerConcurrencyOptions;
 
         private IScriptEventManager _eventManager;
         private IEnumerable<RpcWorkerConfig> _workerConfigs;
@@ -67,7 +67,7 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
             IJobHostRpcWorkerChannelManager jobHostLanguageWorkerChannelManager,
             IOptions<ManagedDependencyOptions> managedDependencyOptions,
             IRpcFunctionInvocationDispatcherLoadBalancer functionDispatcherLoadBalancer,
-            IOptions<WorkerConcurrencyOptions> concurrencyOptions)
+            IOptions<WorkerConcurrencyOptions> workerConcurrencyOptions)
         {
             _metricsLogger = metricsLogger;
             _scriptOptions = scriptHostOptions.Value;
@@ -83,7 +83,7 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
             _rpcWorkerChannelFactory = rpcWorkerChannelFactory;
             _workerRuntime = _environment.GetEnvironmentVariable(RpcWorkerConstants.FunctionWorkerRuntimeSettingName);
             _functionDispatcherLoadBalancer = functionDispatcherLoadBalancer;
-            _concurrencyOptions = concurrencyOptions;
+            _workerConcurrencyOptions = workerConcurrencyOptions;
             State = FunctionInvocationDispatcherState.Default;
 
             _workerErrorSubscription = _eventManager.OfType<WorkerErrorEvent>()
@@ -152,11 +152,6 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
                 for (var count = startIndex; count < _maxProcessCount
                     && !_processStartCancellationToken.IsCancellationRequested; count++)
                 {
-                    if (_concurrencyOptions.Value.Enabled && count > 0)
-                    {
-                        // Make sure only one worker is started if concurancy is enabled
-                        return;
-                    }
                     try
                     {
                         await startAction();
@@ -165,6 +160,11 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
                     catch (Exception ex)
                     {
                         _logger.LogError(ex, $"Failed to start a new language worker for runtime: {_workerRuntime}.");
+                    }
+                    if (_workerConcurrencyOptions.Value.DynamicConcurrencyEnabled && count > 0)
+                    {
+                        // Make sure only one worker is started of concurrency is enabled
+                        break;
                     }
                 }
             }, _processStartCancellationToken.Token);
@@ -203,7 +203,7 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
                 // With .NET out-of-proc, worker config comes from functions.
                 throw new InvalidOperationException($"WorkerCofig for runtime: {_workerRuntime} not found");
             }
-            _maxProcessCount = _concurrencyOptions.Value.Enabled ? _concurrencyOptions.Value.MaxWorkerCount : workerConfig.CountOptions.ProcessCount;
+            _maxProcessCount = _workerConcurrencyOptions.Value.DynamicConcurrencyEnabled ? _workerConcurrencyOptions.Value.MaxWorkerCount : workerConfig.CountOptions.ProcessCount;
             _processStartupInterval = workerConfig.CountOptions.ProcessStartupInterval;
             _restartWait = workerConfig.CountOptions.ProcessRestartInterval;
             _shutdownTimeout = workerConfig.CountOptions.ProcessShutdownTimeout;
@@ -433,7 +433,7 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
                 try
                 {
                     // Issue only one restart at a time.
-                    await _startWorkerProcessSLock.WaitAsync();
+                    await _startWorkerProcessLock.WaitAsync();
                     await InitializeJobhostLanguageWorkerChannelAsync(_languageWorkerErrors.Count);
                 }
                 finally
@@ -442,7 +442,7 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
                     try
                     {
                         await Task.Delay(_restartWait, _disposeToken.Token);
-                        _startWorkerProcessSLock.Release();
+                        _startWorkerProcessLock.Release();
                     }
                     catch (TaskCanceledException)
                     {
@@ -481,7 +481,7 @@ namespace Microsoft.Azure.WebJobs.Script.Workers.Rpc
                     _logger.LogDebug("Disposing FunctionDispatcher");
                     _disposeToken.Cancel();
                     _disposeToken.Dispose();
-                    _startWorkerProcessSLock.Dispose();
+                    _startWorkerProcessLock.Dispose();
                     _workerErrorSubscription.Dispose();
                     _workerRestartSubscription.Dispose();
                     _processStartCancellationToken.Cancel();

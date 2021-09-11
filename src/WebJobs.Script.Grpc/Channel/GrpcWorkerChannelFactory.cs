@@ -23,10 +23,10 @@ namespace Microsoft.Azure.WebJobs.Script.Grpc
         private readonly IEnvironment _environment = null;
         private readonly IOptionsMonitor<ScriptApplicationHostOptions> _applicationHostOptions = null;
         private readonly ISharedMemoryManager _sharedMemoryManager = null;
-        private readonly IOptions<WorkerConcurrencyOptions> _concurrencyOptions;
+        private readonly IOptions<WorkerConcurrencyOptions> _workerConcurrencyOptions;
 
         public GrpcWorkerChannelFactory(IScriptEventManager eventManager, IEnvironment environment, IRpcServer rpcServer, ILoggerFactory loggerFactory, IOptionsMonitor<LanguageWorkerOptions> languageWorkerOptions,
-            IOptionsMonitor<ScriptApplicationHostOptions> applicationHostOptions, IRpcWorkerProcessFactory rpcWorkerProcessManager, ISharedMemoryManager sharedMemoryManager, IOptions<WorkerConcurrencyOptions> concurrencyOptions)
+            IOptionsMonitor<ScriptApplicationHostOptions> applicationHostOptions, IRpcWorkerProcessFactory rpcWorkerProcessManager, ISharedMemoryManager sharedMemoryManager, IOptions<WorkerConcurrencyOptions> workerConcurrencyOptions)
         {
             _eventManager = eventManager;
             _loggerFactory = loggerFactory;
@@ -34,7 +34,7 @@ namespace Microsoft.Azure.WebJobs.Script.Grpc
             _environment = environment;
             _applicationHostOptions = applicationHostOptions;
             _sharedMemoryManager = sharedMemoryManager;
-            _concurrencyOptions = concurrencyOptions;
+            _workerConcurrencyOptions = workerConcurrencyOptions;
         }
 
         public IRpcWorkerChannel Create(string scriptRootPath, string runtime, IMetricsLogger metricsLogger, int attemptCount, IEnumerable<RpcWorkerConfig> workerConfigs)
@@ -58,7 +58,7 @@ namespace Microsoft.Azure.WebJobs.Script.Grpc
                          _environment,
                          _applicationHostOptions,
                          _sharedMemoryManager,
-                         _concurrencyOptions);
+                         _workerConcurrencyOptions);
         }
     }
 }

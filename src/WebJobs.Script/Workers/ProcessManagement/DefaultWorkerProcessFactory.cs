@@ -14,17 +14,17 @@ namespace Microsoft.Azure.WebJobs.Script.Workers
 {
     internal class DefaultWorkerProcessFactory : IWorkerProcessFactory
     {
-        private readonly IOptions<WorkerConcurrencyOptions> _concurrencyOptions;
+        private readonly IOptions<WorkerConcurrencyOptions> _workerConcurrencyOptions;
         private readonly ILogger _logger;
 
-        public DefaultWorkerProcessFactory(ILoggerFactory loggerFactory, IOptions<WorkerConcurrencyOptions> concurrencyOptions)
+        public DefaultWorkerProcessFactory(ILoggerFactory loggerFactory, IOptions<WorkerConcurrencyOptions> workerConcurrencyOptions)
         {
             if (loggerFactory == null)
             {
                 throw new ArgumentNullException(nameof(loggerFactory));
             }
             _logger = loggerFactory.CreateLogger<DefaultWorkerProcessFactory>();
-            _concurrencyOptions = concurrencyOptions ?? throw new ArgumentNullException(nameof(concurrencyOptions));
+            _workerConcurrencyOptions = workerConcurrencyOptions ?? throw new ArgumentNullException(nameof(workerConcurrencyOptions));
         }
 
         public virtual Process CreateWorkerProcess(WorkerContext context)
@@ -99,13 +99,13 @@ namespace Microsoft.Azure.WebJobs.Script.Workers
 
         internal void ApplyWorkerConcurrencyLimits(ProcessStartInfo startInfo)
         {
-            if (_concurrencyOptions.Value.Enabled)
+            if (_workerConcurrencyOptions.Value.DynamicConcurrencyEnabled)
             {
                 // Remove concurrency limits for Python and Powershell language workers
                 string functionWorkerRuntime = startInfo.EnvironmentVariables[RpcWorkerConstants.FunctionWorkerRuntimeSettingName];
                 if (functionWorkerRuntime == RpcWorkerConstants.PythonLanguageWorkerName)
                 {
-                    startInfo.EnvironmentVariables[RpcWorkerConstants.PythonTreadpoolThreadCount] = RpcWorkerConstants.DefaultConcurrencyPython;
+                    startInfo.EnvironmentVariables[RpcWorkerConstants.PythonThreadpoolThreadCount] = RpcWorkerConstants.DefaultConcurrencyPython;
                 }
                 if (functionWorkerRuntime == RpcWorkerConstants.PowerShellLanguageWorkerName)
                 {

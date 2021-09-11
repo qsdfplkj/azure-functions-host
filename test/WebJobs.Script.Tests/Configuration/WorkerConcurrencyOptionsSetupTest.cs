@@ -13,12 +13,12 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Configuration
     public class WorkerConcurrencyOptionsSetupTest
     {
         [Theory]
-        [InlineData("true", "", "node", "", "", true)]
-        [InlineData("true", "1", "node", "", "", false)]
-        [InlineData("true", "", "python", "1", "1", false)]
-        [InlineData("true", "", "powershell", "1", "1", false)]
+        [InlineData(true, "", "node", "", "", true)]
+        [InlineData(true, "1", "node", "", "", false)]
+        [InlineData(true, "", "python", "1", "1", false)]
+        [InlineData(true, "", "powershell", "1", "1", false)]
         public void Configure_SetsExpectedValues(
-            string functionWorkerConcurrencyEnabled,
+            bool functionWorkerConcurrencyEnabled,
             string functionsWorkerProcessCount,
             string functionWorkerRuntime,
             string pythonTreadpoolThreadCount,
@@ -27,17 +27,19 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Configuration
         {
             IConfiguration config = new ConfigurationBuilder().Build();
             TestEnvironment environment = new TestEnvironment();
-            environment.SetEnvironmentVariable(RpcWorkerConstants.FunctionWorkerDynamicConcurrencyEnabledSettingName, functionWorkerConcurrencyEnabled);
             environment.SetEnvironmentVariable(RpcWorkerConstants.FunctionsWorkerProcessCountSettingName, functionsWorkerProcessCount);
             environment.SetEnvironmentVariable(RpcWorkerConstants.FunctionWorkerRuntimeSettingName, functionWorkerRuntime);
-            environment.SetEnvironmentVariable(RpcWorkerConstants.PythonTreadpoolThreadCount, pythonTreadpoolThreadCount);
+            environment.SetEnvironmentVariable(RpcWorkerConstants.PythonThreadpoolThreadCount, pythonTreadpoolThreadCount);
             environment.SetEnvironmentVariable(RpcWorkerConstants.PSWorkerInProcConcurrencyUpperBound, pSWorkerInProcConcurrencyUpperBound);
 
             WorkerConcurrencyOptionsSetup setup = new WorkerConcurrencyOptionsSetup(config, environment);
-            WorkerConcurrencyOptions options = new WorkerConcurrencyOptions();
+            WorkerConcurrencyOptions options = new WorkerConcurrencyOptions()
+            {
+                DynamicConcurrencyEnabled = functionWorkerConcurrencyEnabled
+            };
             setup.Configure(options);
 
-            Assert.Equal(options.Enabled, enabled);
+            Assert.Equal(options.DynamicConcurrencyEnabled, enabled);
             if (enabled)
             {
                 Assert.Equal(options.MaxWorkerCount, (Environment.ProcessorCount * 2) + 2);
@@ -59,10 +61,12 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Configuration
             .Build();
 
             TestEnvironment environment = new TestEnvironment();
-            environment.SetEnvironmentVariable(RpcWorkerConstants.FunctionWorkerDynamicConcurrencyEnabledSettingName, "true");
 
             WorkerConcurrencyOptionsSetup setup = new WorkerConcurrencyOptionsSetup(config, environment);
-            WorkerConcurrencyOptions options = new WorkerConcurrencyOptions();
+            WorkerConcurrencyOptions options = new WorkerConcurrencyOptions()
+            {
+                DynamicConcurrencyEnabled = true
+            };
             setup.Configure(options);
 
             Assert.Equal(options.MaxWorkerCount, 1);

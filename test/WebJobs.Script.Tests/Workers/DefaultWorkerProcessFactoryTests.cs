@@ -114,7 +114,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
         }
 
         [Theory]
-        [InlineData(RpcWorkerConstants.PythonTreadpoolThreadCount, RpcWorkerConstants.PythonLanguageWorkerName, RpcWorkerConstants.DefaultConcurrencyPython)]
+        [InlineData(RpcWorkerConstants.PythonThreadpoolThreadCount, RpcWorkerConstants.PythonLanguageWorkerName, RpcWorkerConstants.DefaultConcurrencyPython)]
         [InlineData(RpcWorkerConstants.PSWorkerInProcConcurrencyUpperBound, RpcWorkerConstants.PowerShellLanguageWorkerName, RpcWorkerConstants.DefaultConcurrencyPS)]
         public void DefaultWorkerProcessFactory_LanguageWorkerConcurrency_Overwrite(string appSettingName, string funcrionWorkerRuntime, string defaultConcurrecny)
         {
@@ -122,7 +122,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
             DefaultWorkerProcessFactory defaultWorkerProcessFactory = new DefaultWorkerProcessFactory(_loggerFactory,
                 Options.Create(new WorkerConcurrencyOptions()
                 {
-                    Enabled = true
+                    DynamicConcurrencyEnabled = true
                 }));
             Process process = defaultWorkerProcessFactory.CreateWorkerProcess(TestWorkerContexts.ToList()[1][0] as WorkerContext);
             Assert.Equal(process.StartInfo.EnvironmentVariables[appSettingName], defaultConcurrecny);
@@ -130,7 +130,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
         }
 
         [Theory]
-        [InlineData(RpcWorkerConstants.PythonTreadpoolThreadCount, RpcWorkerConstants.PythonLanguageWorkerName)]
+        [InlineData(RpcWorkerConstants.PythonThreadpoolThreadCount, RpcWorkerConstants.PythonLanguageWorkerName)]
         [InlineData(RpcWorkerConstants.PSWorkerInProcConcurrencyUpperBound, RpcWorkerConstants.PowerShellLanguageWorkerName)]
         public void DefaultWorkerProcessFactory_LanguageWorkerConcurrency_NoChanges(string appSettingName, string funcrionWorkerRuntime)
         {

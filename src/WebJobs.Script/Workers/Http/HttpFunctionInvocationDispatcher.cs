@@ -124,10 +124,10 @@ namespace Microsoft.Azure.WebJobs.Script.Workers
             }
         }
 
-        public async Task StartWorkerChannel()
+        public Task StartWorkerChannel()
         {
-            // currenly only one worker
-            await Task.CompletedTask;
+            // currently only one worker
+            return Task.CompletedTask;
         }
 
         private async Task DisposeAndRestartWorkerChannel(string workerId)

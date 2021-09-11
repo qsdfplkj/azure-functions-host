@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using Microsoft.Azure.WebJobs.Script.Scale;
 using Microsoft.Azure.WebJobs.Script.Workers.Rpc;
 
@@ -18,9 +19,9 @@ namespace Microsoft.Azure.WebJobs.Script.Workers
         public TimeSpan Latency { get; set; }
 
         /// <summary>
-        /// Gets or sets the worker latency statistic.
+        /// Gets or sets latency history.
         /// </summary>
-        public WorkerStats WorkerStats { get; set; }
+        public IEnumerable<TimeSpan> LatencyHistory { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether worker is ready

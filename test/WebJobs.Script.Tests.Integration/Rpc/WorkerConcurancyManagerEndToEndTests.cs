@@ -38,9 +38,9 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
         {
             public TestFixture() : base(@"TestScripts\Node", "node", RpcWorkerConstants.NodeLanguageWorkerName,
                 startHost: true, functions: new[] { "HttpTrigger" },
-                concurrencyOptions: Options.Create(new WorkerConcurrencyOptions()
+                workerConcurrencyOptions: Options.Create(new WorkerConcurrencyOptions()
                 {
-                    Enabled = true,
+                    DynamicConcurrencyEnabled = true,
                     MaxWorkerCount = 2,
                     AdjustmentPeriod = TimeSpan.Zero,
                     CheckInterval = TimeSpan.FromMilliseconds(1000)

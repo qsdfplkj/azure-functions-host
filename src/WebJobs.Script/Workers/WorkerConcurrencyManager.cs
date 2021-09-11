@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Azure.WebJobs.Logging;
 using Microsoft.Azure.WebJobs.Script.Workers.Rpc;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -18,44 +19,42 @@ namespace Microsoft.Azure.WebJobs.Script.Workers
     internal class WorkerConcurrencyManager : IHostedService, IDisposable
     {
         private readonly TimeSpan _logStateInterval = TimeSpan.FromSeconds(60);
-        private readonly IOptions<WorkerConcurrencyOptions> _concurrencyOptions;
+        private readonly IOptions<WorkerConcurrencyOptions> _workerConcurrencyOptions;
         private readonly ILogger _logger;
         private readonly IFunctionInvocationDispatcherFactory _functionInvocationDispatcherFactory;
 
         private IFunctionInvocationDispatcher _functionInvocationDispatcher;
         private System.Timers.Timer _timer;
-        private Stopwatch _addWorkerStopWatch = Stopwatch.StartNew();
+        private Stopwatch _addWorkerStopwatch = Stopwatch.StartNew();
         private Stopwatch _logStateStopWatch = Stopwatch.StartNew();
         private bool _disposed = false;
 
         public WorkerConcurrencyManager(IFunctionInvocationDispatcherFactory functionInvocationDispatcherFactory,
-            IOptions<WorkerConcurrencyOptions> concurrencyOptions, ILoggerFactory loggerFactory)
+            IOptions<WorkerConcurrencyOptions> workerConcurrencyOptions, ILoggerFactory loggerFactory)
         {
-            _concurrencyOptions = concurrencyOptions ?? throw new ArgumentNullException(nameof(concurrencyOptions));
+            _workerConcurrencyOptions = workerConcurrencyOptions ?? throw new ArgumentNullException(nameof(workerConcurrencyOptions));
             _functionInvocationDispatcherFactory = functionInvocationDispatcherFactory ?? throw new ArgumentNullException(nameof(functionInvocationDispatcherFactory));
 
-            _logger = loggerFactory?.CreateLogger<WorkerConcurrencyManager>();
+            _logger = loggerFactory?.CreateLogger(LogCategories.Concurrency);
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            if (_concurrencyOptions.Value.Enabled)
+            if (_workerConcurrencyOptions.Value.DynamicConcurrencyEnabled)
             {
-                // Delay monitoring
-                await Task.Delay(_concurrencyOptions.Value.AdjustmentPeriod);
-
                 _functionInvocationDispatcher = _functionInvocationDispatcherFactory.GetFunctionDispatcher();
+
                 if (_functionInvocationDispatcher is HttpFunctionInvocationDispatcher)
                 {
-                    _logger.LogDebug($"Http worker concurrency is not supported.");
+                    _logger.LogDebug($"Http dynamic worker concurrency is not supported.");
                     return;
                 }
 
-                _logger.LogDebug($"Starting worker concurrency monitoring. Options: {_concurrencyOptions.Value.Format()}");
+                _logger.LogDebug($"Starting dynamic worker concurrency monitoring.");
                 _timer = new System.Timers.Timer()
                 {
                     AutoReset = false,
-                    Interval = _concurrencyOptions.Value.CheckInterval.TotalMilliseconds,
+                    Interval = _workerConcurrencyOptions.Value.CheckInterval.TotalMilliseconds,
                 };
 
                 _timer.Elapsed += OnTimer;
@@ -63,7 +62,7 @@ namespace Microsoft.Azure.WebJobs.Script.Workers
             }
             else
             {
-                _logger.LogDebug($"Language worker concurrency is disabled.");
+                _logger.LogDebug($"Dynamic worker concurrency is disabled.");
             }
 
             await Task.CompletedTask;
@@ -71,9 +70,9 @@ namespace Microsoft.Azure.WebJobs.Script.Workers
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            if (_concurrencyOptions.Value.Enabled && _timer != null)
+            if (_workerConcurrencyOptions.Value.DynamicConcurrencyEnabled && _timer != null)
             {
-                _logger.LogDebug("Stoping language worker concurrency monitoring.");
+                _logger.LogDebug("Stopping dynamic worker concurrency monitoring.");
                 _timer.Stop();
             }
             return Task.CompletedTask;
@@ -81,7 +80,7 @@ namespace Microsoft.Azure.WebJobs.Script.Workers
 
         internal async void OnTimer(object sender, System.Timers.ElapsedEventArgs e)
         {
-            if (_disposed && _functionInvocationDispatcher == null)
+            if (_disposed)
             {
                 return;
             }
@@ -90,11 +89,11 @@ namespace Microsoft.Azure.WebJobs.Script.Workers
             {
                 var workerStatuses = await _functionInvocationDispatcher.GetWorkerStatusesAsync();
 
-                if (AddWorkerIfNeeded(workerStatuses, _addWorkerStopWatch.Elapsed))
+                if (NewWorkerIsRequired(workerStatuses, _addWorkerStopwatch.Elapsed))
                 {
                     await _functionInvocationDispatcher.StartWorkerChannel();
                     _logger.LogDebug("New worker is added.");
-                    _addWorkerStopWatch.Restart();
+                    _addWorkerStopwatch.Restart();
                 }
             }
             catch (Exception ex)
@@ -105,9 +104,9 @@ namespace Microsoft.Azure.WebJobs.Script.Workers
             _timer.Start();
         }
 
-        internal bool AddWorkerIfNeeded(IDictionary<string, WorkerStatus> workerStatuses, TimeSpan elaspsedFromLastAdding)
+        internal bool NewWorkerIsRequired(IDictionary<string, WorkerStatus> workerStatuses, TimeSpan timeSinceLastNewWorker)
         {
-            if (elaspsedFromLastAdding < _concurrencyOptions.Value.AdjustmentPeriod)
+            if (timeSinceLastNewWorker < _workerConcurrencyOptions.Value.AdjustmentPeriod)
             {
                 return false;
             }
@@ -115,24 +114,24 @@ namespace Microsoft.Azure.WebJobs.Script.Workers
             bool result = false;
             if (workerStatuses.All(x => x.Value.IsReady))
             {
-                // Check how many channels are oveloaded
-                List<WorkerDescription> descriptions = new List<WorkerDescription>();
+                // Check how many channels are overloaded
+                List<WorkerStatusDetails> descriptions = new List<WorkerStatusDetails>();
                 foreach (string key in workerStatuses.Keys)
                 {
                     WorkerStatus workerStatus = workerStatuses[key];
                     bool overloaded = IsOverloaded(workerStatus);
-                    descriptions.Add(new WorkerDescription()
+                    descriptions.Add(new WorkerStatusDetails()
                     {
                         WorkerId = key,
                         WorkerStatus = workerStatus,
-                        Overloaded = overloaded
+                        IsOverloaded = overloaded
                     });
                 }
 
-                int overloadedCount = descriptions.Where(x => x.Overloaded == true).Count();
+                int overloadedCount = descriptions.Where(x => x.IsOverloaded == true).Count();
                 if (overloadedCount > 0)
                 {
-                    if (workerStatuses.Count() < _concurrencyOptions.Value.MaxWorkerCount)
+                    if (workerStatuses.Count() < _workerConcurrencyOptions.Value.MaxWorkerCount)
                     {
                         _logger.LogDebug($"Adding a new worker, overloaded workers = {overloadedCount}, initialized workers = {workerStatuses.Count()} ");
                         result = true;
@@ -142,9 +141,9 @@ namespace Microsoft.Azure.WebJobs.Script.Workers
                 if (result == true || _logStateStopWatch.Elapsed > _logStateInterval)
                 {
                     StringBuilder sb = new StringBuilder();
-                    foreach (WorkerDescription description in descriptions)
+                    foreach (WorkerStatusDetails description in descriptions)
                     {
-                        sb.Append(LogWorkerState(description));
+                        sb.Append(FormatWorkerDescription(description));
                         sb.Append(Environment.NewLine);
                     }
                     _logStateStopWatch.Restart();
@@ -157,34 +156,31 @@ namespace Microsoft.Azure.WebJobs.Script.Workers
 
         internal bool IsOverloaded(WorkerStatus status)
         {
-            if (status.WorkerStats.LatencyHistory.Count() >= _concurrencyOptions.Value.HistorySize)
+            if (status.LatencyHistory.Count() >= _workerConcurrencyOptions.Value.HistorySize)
             {
-                int overloadedCount = status.WorkerStats.LatencyHistory.Where(x => x.TotalMilliseconds >= _concurrencyOptions.Value.LatencyThreshold.TotalMilliseconds).Count();
-                double proportion = (double)overloadedCount / _concurrencyOptions.Value.HistorySize;
+                int overloadedCount = status.LatencyHistory.Where(x => x.TotalMilliseconds >= _workerConcurrencyOptions.Value.LatencyThreshold.TotalMilliseconds).Count();
+                double proportion = (double)overloadedCount / _workerConcurrencyOptions.Value.HistorySize;
 
-                return proportion >= _concurrencyOptions.Value.HistoryThreshold;
+                return proportion >= _workerConcurrencyOptions.Value.NewWorkerThreshold;
             }
             return false;
         }
 
-        internal string LogWorkerState(WorkerDescription desc)
+        internal string FormatWorkerDescription(WorkerStatusDetails desc)
         {
             string formattedLoadHistory = string.Empty, formattedLatencyHistory = string.Empty;
             double latencyAvg = 0, latencyMax = 0;
-            if (desc.WorkerStatus != null)
+            if (desc.WorkerStatus != null && desc.WorkerStatus.LatencyHistory != null)
             {
-                if (desc.WorkerStatus.WorkerStats != null && desc.WorkerStatus.WorkerStats.LatencyHistory != null)
+                formattedLatencyHistory = string.Join(",", desc.WorkerStatus.LatencyHistory);
+                latencyMax = desc.WorkerStatus.LatencyHistory.Select(x => x.TotalMilliseconds).Max();
+                if (desc.WorkerStatus.LatencyHistory.Count() > 1)
                 {
-                    formattedLatencyHistory = string.Join(",", desc.WorkerStatus.WorkerStats.LatencyHistory);
-                    latencyMax = desc.WorkerStatus.WorkerStats.LatencyHistory.Select(x => x.TotalMilliseconds).Max();
-                    if (desc.WorkerStatus.WorkerStats.LatencyHistory.Count() > 1)
-                    {
-                        latencyAvg = desc.WorkerStatus.WorkerStats.LatencyHistory.Select(x => x.TotalMilliseconds).Average();
-                    }
+                    latencyAvg = desc.WorkerStatus.LatencyHistory.Select(x => x.TotalMilliseconds).Average();
                 }
             }
 
-            return $@"Worker process stats: ProcessId={desc.WorkerId}, Overloaded={desc.Overloaded} 
+            return $@"Worker process stats: ProcessId={desc.WorkerId}, Overloaded={desc.IsOverloaded} 
 LatencyHistory=({formattedLatencyHistory}), AvgLatency={latencyAvg}, MaxLatency={latencyMax}";
         }
 
@@ -206,13 +202,13 @@ LatencyHistory=({formattedLatencyHistory}), AvgLatency={latencyAvg}, MaxLatency=
             Dispose(true);
         }
 
-        internal class WorkerDescription
+        internal class WorkerStatusDetails
         {
             public string WorkerId { get; set; }
 
             public WorkerStatus WorkerStatus { get; set; }
 
-            public bool Overloaded { get; set; }
+            public bool IsOverloaded { get; set; }
         }
     }
 }

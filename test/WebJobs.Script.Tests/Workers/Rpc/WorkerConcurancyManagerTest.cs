@@ -35,7 +35,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
                 {
                     Options.Create(new WorkerConcurrencyOptions()
                     {
-                        Enabled = true,
+                        DynamicConcurrencyEnabled = true,
                         HistorySize = 5
                     }),
                     new int[] { 1, 2, 3, 4 },
@@ -45,7 +45,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
                 {
                     Options.Create(new WorkerConcurrencyOptions()
                     {
-                        Enabled = true,
+                        DynamicConcurrencyEnabled = true,
                         LatencyThreshold = TimeSpan.FromMilliseconds(10),
                         HistorySize = 5
                     }),
@@ -56,7 +56,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
                 {
                     Options.Create(new WorkerConcurrencyOptions()
                     {
-                        Enabled = true,
+                        DynamicConcurrencyEnabled = true,
                         LatencyThreshold = TimeSpan.FromMilliseconds(10),
                         HistorySize = 5
                     }),
@@ -67,10 +67,10 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
                 {
                     Options.Create(new WorkerConcurrencyOptions()
                     {
-                        Enabled = true,
+                        DynamicConcurrencyEnabled = true,
                         LatencyThreshold = TimeSpan.FromMilliseconds(13),
                         HistorySize = 6,
-                        HistoryThreshold = 0.5F
+                        NewWorkerThreshold = 0.5F
                     }),
                     new int[] { 11, 12, 13, 14, 15, 16 },
                     true
@@ -79,10 +79,10 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
                 {
                     Options.Create(new WorkerConcurrencyOptions()
                     {
-                        Enabled = true,
+                        DynamicConcurrencyEnabled = true,
                         LatencyThreshold = TimeSpan.FromMilliseconds(15),
                         HistorySize = 6,
-                        HistoryThreshold = 0.5F
+                        NewWorkerThreshold = 0.5F
                     }),
                     new int[] { 11, 12, 13, 14, 15, 16 },
                     false
@@ -91,7 +91,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
                 {
                     Options.Create(new WorkerConcurrencyOptions()
                     {
-                        Enabled = true,
+                        DynamicConcurrencyEnabled = true,
                         LatencyThreshold = TimeSpan.FromMilliseconds(14),
                         HistorySize = 5,
                     }),
@@ -107,7 +107,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
                 {
                     Options.Create(new WorkerConcurrencyOptions()
                     {
-                        Enabled = true,
+                        DynamicConcurrencyEnabled = true,
                         HistorySize = 5,
                         LatencyThreshold = TimeSpan.FromMilliseconds(200),
                         AdjustmentPeriod = TimeSpan.FromMilliseconds(1000),
@@ -124,7 +124,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
                 {
                     Options.Create(new WorkerConcurrencyOptions()
                     {
-                        Enabled = true,
+                        DynamicConcurrencyEnabled = true,
                         HistorySize = 5,
                         LatencyThreshold = TimeSpan.FromMilliseconds(110),
                         AdjustmentPeriod = TimeSpan.FromMilliseconds(1000),
@@ -141,7 +141,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
                 {
                     Options.Create(new WorkerConcurrencyOptions()
                     {
-                        Enabled = true,
+                        DynamicConcurrencyEnabled = true,
                         HistorySize = 5,
                         LatencyThreshold = TimeSpan.FromMilliseconds(110),
                         AdjustmentPeriod = TimeSpan.FromMilliseconds(1000),
@@ -158,7 +158,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
                 {
                     Options.Create(new WorkerConcurrencyOptions()
                     {
-                        Enabled = true,
+                        DynamicConcurrencyEnabled = true,
                         HistorySize = 5,
                         LatencyThreshold = TimeSpan.FromMilliseconds(110),
                         AdjustmentPeriod = TimeSpan.FromMilliseconds(1000),
@@ -175,7 +175,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
                 {
                     Options.Create(new WorkerConcurrencyOptions()
                     {
-                        Enabled = true,
+                        DynamicConcurrencyEnabled = true,
                         HistorySize = 5,
                         LatencyThreshold = TimeSpan.FromMilliseconds(110),
                         AdjustmentPeriod = TimeSpan.FromMilliseconds(1000),
@@ -192,7 +192,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
                 {
                     Options.Create(new WorkerConcurrencyOptions()
                     {
-                        Enabled = true,
+                        DynamicConcurrencyEnabled = true,
                         HistorySize = 5,
                         LatencyThreshold = TimeSpan.FromMilliseconds(110),
                         AdjustmentPeriod = TimeSpan.FromMilliseconds(1000),
@@ -212,7 +212,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
         {
             IOptions<WorkerConcurrencyOptions> options = Options.Create(new WorkerConcurrencyOptions()
             {
-                Enabled = true,
+                DynamicConcurrencyEnabled = true,
                 AdjustmentPeriod = TimeSpan.Zero
             });
             Mock<IFunctionInvocationDispatcher> functionInvocationDispatcher = new Mock<IFunctionInvocationDispatcher>(MockBehavior.Strict);
@@ -223,7 +223,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
 
             await TestHelpers.Await(() =>
             {
-                var sratedLog = _loggerProvider.GetAllLogMessages().FirstOrDefault(x => x.FormattedMessage.StartsWith("Starting worker concurrency monitoring."));
+                var sratedLog = _loggerProvider.GetAllLogMessages().FirstOrDefault(x => x.FormattedMessage.StartsWith("Starting dynamic worker concurrency monitoring."));
                 return sratedLog != null;
             }, pollingInterval: 1000, timeout: 10 * 1000);
         }
@@ -233,7 +233,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
         {
             IOptions<WorkerConcurrencyOptions> options = Options.Create(new WorkerConcurrencyOptions()
             {
-                Enabled = false
+                DynamicConcurrencyEnabled = false
             });
             Mock<IFunctionInvocationDispatcher> functionInvocationDispatcher = new Mock<IFunctionInvocationDispatcher>(MockBehavior.Strict);
             Mock<IFunctionInvocationDispatcherFactory> functionInvocationDispatcherFactory = new Mock<IFunctionInvocationDispatcherFactory>(MockBehavior.Strict);
@@ -242,7 +242,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
             await concurrancyManger.StartAsync(CancellationToken.None);
 
             await Task.Delay(1000);
-            var sratedLog = _loggerProvider.GetAllLogMessages().FirstOrDefault(x => x.FormattedMessage.StartsWith("Starting worker concurrency monitoring."));
+            var sratedLog = _loggerProvider.GetAllLogMessages().FirstOrDefault(x => x.FormattedMessage.StartsWith("Starting dynamic worker concurrency monitoring."));
             Assert.True(sratedLog == null);
         }
 
@@ -251,7 +251,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
         {
             IOptions<WorkerConcurrencyOptions> options = Options.Create(new WorkerConcurrencyOptions()
             {
-                Enabled = false
+                DynamicConcurrencyEnabled = true
             });
             Mock<IFunctionInvocationDispatcherFactory> functionInvocationDispatcherFactory = new Mock<IFunctionInvocationDispatcherFactory>(MockBehavior.Strict);
             functionInvocationDispatcherFactory.Setup(x => x.GetFunctionDispatcher()).Returns(new HttpFunctionInvocationDispatcher());
@@ -259,8 +259,8 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
             await concurrancyManger.StartAsync(CancellationToken.None);
 
             await Task.Delay(1000);
-            var sratedLog = _loggerProvider.GetAllLogMessages().FirstOrDefault(x => x.FormattedMessage.StartsWith("Http worker concurrency is not supported."));
-            Assert.True(sratedLog == null);
+            var sratedLog = _loggerProvider.GetAllLogMessages().FirstOrDefault(x => x.FormattedMessage.StartsWith("Http dynamic worker concurrency is not supported."));
+            Assert.True(sratedLog != null);
         }
 
         [Theory]
@@ -275,10 +275,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
 
             WorkerStatus status = new WorkerStatus()
             {
-                WorkerStats = new WorkerStats()
-                {
-                    LatencyHistory = latencies.Select(x => TimeSpan.FromMilliseconds(x))
-                }
+                LatencyHistory = latencies.Select(x => TimeSpan.FromMilliseconds(x))
             };
 
             Assert.Equal(concurrancyManger.IsOverloaded(status), expected);
@@ -299,23 +296,17 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers
             workerStatuses.Add("test1", new WorkerStatus()
             {
                 IsReady = readyForInvocations1,
-                WorkerStats = new WorkerStats()
-                {
-                    LatencyHistory = latencies1.Select(x => TimeSpan.FromMilliseconds(x))
-                }
+                LatencyHistory = latencies1.Select(x => TimeSpan.FromMilliseconds(x))
             });
             workerStatuses.Add("test2", new WorkerStatus()
             {
                 IsReady = readyForInvocations2,
-                WorkerStats = new WorkerStats()
-                {
-                    LatencyHistory = latencies2.Select(x => TimeSpan.FromMilliseconds(x))
-                }
+                LatencyHistory = latencies2.Select(x => TimeSpan.FromMilliseconds(x))
             });
 
             WorkerConcurrencyManager concurrancyManager = new WorkerConcurrencyManager(functionInvocationDispatcherFactory.Object, options, _loggerFactory);
 
-            bool value = concurrancyManager.AddWorkerIfNeeded(workerStatuses, elapsedFromLastAdding);
+            bool value = concurrancyManager.NewWorkerIsRequired(workerStatuses, elapsedFromLastAdding);
 
             Assert.Equal(value, expected);
         }

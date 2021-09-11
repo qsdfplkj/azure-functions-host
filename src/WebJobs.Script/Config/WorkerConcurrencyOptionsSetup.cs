@@ -20,29 +20,20 @@ namespace Microsoft.Azure.WebJobs.Script.Config
 
         public void Configure(WorkerConcurrencyOptions options)
         {
-            if (bool.TryParse(_environment.GetEnvironmentVariable(RpcWorkerConstants.FunctionWorkerDynamicConcurrencyEnabledSettingName), out bool enabled))
+            if (!string.IsNullOrEmpty(_environment.GetEnvironmentVariable(RpcWorkerConstants.FunctionsWorkerProcessCountSettingName))
+                || !string.IsNullOrEmpty(_environment.GetEnvironmentVariable(RpcWorkerConstants.PythonThreadpoolThreadCount))
+                || !string.IsNullOrEmpty(_environment.GetEnvironmentVariable(RpcWorkerConstants.PSWorkerInProcConcurrencyUpperBound)))
             {
-                // Do not enable convurrency if any concurrency settings are defined
-                if (enabled && string.IsNullOrEmpty(_environment.GetEnvironmentVariable(RpcWorkerConstants.FunctionsWorkerProcessCountSettingName)))
+                options.DynamicConcurrencyEnabled = false;
+            }
+            else
+            {
+                // Configure dynamic worker concurrency options from IConfiguration
+                _configuration.GetSection(nameof(WorkerConcurrencyOptions)).Bind(options);
+
+                if (options.MaxWorkerCount == 0)
                 {
-                    string functionWorkerRuntime = _environment.GetEnvironmentVariable(RpcWorkerConstants.FunctionWorkerRuntimeSettingName);
-
-                    if ((functionWorkerRuntime == RpcWorkerConstants.PythonLanguageWorkerName
-                        && !string.IsNullOrEmpty(_environment.GetEnvironmentVariable(RpcWorkerConstants.PythonTreadpoolThreadCount)))
-                        || (functionWorkerRuntime == RpcWorkerConstants.PowerShellLanguageWorkerName
-                        && !string.IsNullOrEmpty(_environment.GetEnvironmentVariable(RpcWorkerConstants.PSWorkerInProcConcurrencyUpperBound))))
-                    {
-                        return;
-                    }
-
-                    options.Enabled = true;
-                    // Configure worker concurrency options from IConfiguration
-                    _configuration.GetSection(nameof(WorkerConcurrencyOptions)).Bind(options);
-
-                    if (options.MaxWorkerCount == 0)
-                    {
-                        options.MaxWorkerCount = (_environment.GetEffectiveCoresCount() * 2) + 2;
-                    }
+                    options.MaxWorkerCount = (_environment.GetEffectiveCoresCount() * 2) + 2;
                 }
             }
         }

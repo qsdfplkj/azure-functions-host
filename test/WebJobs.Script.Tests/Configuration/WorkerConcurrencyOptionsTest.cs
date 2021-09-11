@@ -16,11 +16,11 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Configuration
         {
             var options = new WorkerConcurrencyOptions();
 
-            Assert.Equal(false, options.Enabled);
+            Assert.Equal(false, options.DynamicConcurrencyEnabled);
             Assert.Equal(TimeSpan.FromSeconds(10), options.AdjustmentPeriod);
             Assert.Equal(TimeSpan.FromSeconds(1), options.CheckInterval);
             Assert.Equal(10, options.HistorySize);
-            Assert.Equal(1, options.HistoryThreshold);
+            Assert.Equal(1, options.NewWorkerThreshold);
             Assert.Equal(TimeSpan.FromSeconds(1F), options.LatencyThreshold);
             Assert.Equal(0, options.MaxWorkerCount);
         }
@@ -30,23 +30,23 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Configuration
         {
             var options = new WorkerConcurrencyOptions
             {
-                Enabled = true,
+                DynamicConcurrencyEnabled = true,
                 LatencyThreshold = TimeSpan.FromSeconds(20),
                 AdjustmentPeriod = TimeSpan.FromSeconds(20),
                 CheckInterval = TimeSpan.FromSeconds(2),
                 HistorySize = 20,
-                HistoryThreshold = 0.5F,
+                NewWorkerThreshold = 0.5F,
                 MaxWorkerCount = 20
             };
 
             string result = options.Format();
             string expected = @"{
-  ""Enabled"": true,
+  ""DynamicConcurrencyEnabled"": true,
   ""LatencyThreshold"": ""00:00:20"",
   ""AdjustmentPeriod"": ""00:00:20"",
   ""CheckInterval"": ""00:00:02"",
   ""HistorySize"": 20,
-  ""HistoryThreshold"": 0.5,
+  ""NewWorkerThreshold"": 0.5,
   ""MaxWorkerCount"": 20
 }";
             Assert.Equal(Regex.Replace(expected, @"\s+", string.Empty), Regex.Replace(result, @"\s+", string.Empty));

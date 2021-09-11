@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using System;
+using System.ComponentModel.DataAnnotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -16,14 +17,14 @@ namespace Microsoft.Azure.WebJobs.Script
             AdjustmentPeriod = TimeSpan.FromSeconds(10);
             CheckInterval = TimeSpan.FromSeconds(1);
             HistorySize = 10;
-            HistoryThreshold = 1F;
+            NewWorkerThreshold = 1F;
         }
 
         /// <summary>
-        /// Gets or sets a value indicating whether worker concurrency
+        /// Gets or sets a value indicating whether dynamic worker concurrency
         /// is enabled.
         /// </summary>
-        public bool Enabled { get; set; }
+        public bool DynamicConcurrencyEnabled { get; set; }
 
         /// <summary>
         /// Gets or sets the latency threshold dictating when worker channel is overloaded.
@@ -47,28 +48,29 @@ namespace Microsoft.Azure.WebJobs.Script
         public int HistorySize { get; set; }
 
         /// <summary>
-        /// Gets or sets the history threshold.
-        /// E. g. value equal to 1.0 means all states in history should be
-        /// overloaded to consider worker state as overloaded.
+        /// Gets or sets the threshold dictating when a new worker will be added.
+        /// Value should be between 0 and 1 indicating the percentage of overloaded channel latency samples required to trigger a addition of a new worker
         /// </summary>
-        public float HistoryThreshold { get; set; }
+        [Range(typeof(float), "0F", "1F", ErrorMessage = "Value for {0} must be between {1} and {2}.")]
+        public float NewWorkerThreshold { get; set; }
 
         /// <summary>
         /// Gets or sets the max count of workers.
         /// It will be set depending on SKU if equal to 0.
         /// </summary>
+        [Range(typeof(int), "0", "100", ErrorMessage = "Value for {0} must be between {1} and {2}.")]
         public int MaxWorkerCount { get; set; }
 
         public string Format()
         {
             var options = new JObject
             {
-                { nameof(Enabled), Enabled },
+                { nameof(DynamicConcurrencyEnabled), DynamicConcurrencyEnabled },
                 { nameof(LatencyThreshold), LatencyThreshold },
                 { nameof(AdjustmentPeriod), AdjustmentPeriod },
                 { nameof(CheckInterval), CheckInterval },
                 { nameof(HistorySize), HistorySize },
-                { nameof(HistoryThreshold), HistoryThreshold },
+                { nameof(NewWorkerThreshold), NewWorkerThreshold },
                 { nameof(MaxWorkerCount), MaxWorkerCount }
             };
 

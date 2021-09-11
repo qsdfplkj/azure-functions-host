@@ -47,7 +47,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
         private readonly IOptionsMonitor<ScriptApplicationHostOptions> _hostOptionsMonitor;
         private readonly IMemoryMappedFileAccessor _mapAccessor;
         private readonly ISharedMemoryManager _sharedMemoryManager;
-        private readonly IOptions<WorkerConcurrencyOptions> _concurrencyOptions;
+        private readonly IOptions<WorkerConcurrencyOptions> _workerConcurrencyOptions;
         private GrpcWorkerChannel _workerChannel;
 
         public GrpcWorkerChannelTests()
@@ -81,7 +81,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
                 HasParentScope = true
             };
             _hostOptionsMonitor = TestHelpers.CreateOptionsMonitor(hostOptions);
-            _concurrencyOptions = Options.Create(new WorkerConcurrencyOptions());
+            _workerConcurrencyOptions = Options.Create(new WorkerConcurrencyOptions());
 
             _workerChannel = new GrpcWorkerChannel(
                _workerId,
@@ -94,7 +94,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
                _testEnvironment,
                _hostOptionsMonitor,
                _sharedMemoryManager,
-               _concurrencyOptions);
+               _workerConcurrencyOptions);
         }
 
         public void Dispose()
@@ -176,7 +176,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
                _testEnvironment,
                _hostOptionsMonitor,
                _sharedMemoryManager,
-               _concurrencyOptions);
+               _workerConcurrencyOptions);
             await Assert.ThrowsAsync<FileNotFoundException>(async () => await _workerChannel.StartWorkerProcessAsync());
         }
 
@@ -289,7 +289,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
                _testEnvironment,
                _hostOptionsMonitor,
                _sharedMemoryManager,
-               _concurrencyOptions);
+               _workerConcurrencyOptions);
             channel.SetupFunctionInvocationBuffers(GetTestFunctionsList("node"));
             ScriptInvocationContext scriptInvocationContext = GetTestScriptInvocationContext(invocationId, resultSource);
             await channel.SendInvocationRequest(scriptInvocationContext);
@@ -551,6 +551,74 @@ namespace Microsoft.Azure.WebJobs.Script.Tests.Workers.Rpc
             _testFunctionRpcService.PublishWorkerInitResponseEvent(capabilities);
 
             Assert.False(_workerChannel.IsSharedMemoryDataTransferEnabled());
+        }
+
+        [Fact]
+        public async Task GetLatencies_StartsTimer()
+        {
+            var workerConcurrencyOptions = Options.Create(new WorkerConcurrencyOptions()
+            {
+                DynamicConcurrencyEnabled = true,
+                CheckInterval = TimeSpan.FromMilliseconds(100),
+                LatencyThreshold = TimeSpan.FromMilliseconds(200),
+                AdjustmentPeriod = TimeSpan.FromMilliseconds(0)
+            });
+
+            GrpcWorkerChannel workerChannel = new GrpcWorkerChannel(
+               _workerId,
+               _eventManager,
+               _testWorkerConfig,
+               _mockrpcWorkerProcess.Object,
+               _logger,
+               _metricsLogger,
+               0,
+               _testEnvironment,
+               _hostOptionsMonitor,
+               _sharedMemoryManager,
+               workerConcurrencyOptions);
+
+            IEnumerable<TimeSpan> latencyHistory = null;
+
+            // wait 10 seconds
+            await TestHelpers.Await(() =>
+            {
+                latencyHistory = workerChannel.GetLatencies();
+                return latencyHistory.Count() > 0;
+            }, pollingInterval: 1000, timeout: 10 * 1000);
+
+            // We have non empty latencyHistory so the timer was started
+        }
+
+        [Fact]
+        public async Task GetLatencies_DoesNot_StartTimer()
+        {
+            var workerConcurrencyOptions = Options.Create(new WorkerConcurrencyOptions()
+            {
+                DynamicConcurrencyEnabled = false,
+                CheckInterval = TimeSpan.FromMilliseconds(100),
+                LatencyThreshold = TimeSpan.FromMilliseconds(200),
+                AdjustmentPeriod = TimeSpan.FromMilliseconds(0)
+            });
+
+            GrpcWorkerChannel workerChannel = new GrpcWorkerChannel(
+               _workerId,
+               _eventManager,
+               _testWorkerConfig,
+               _mockrpcWorkerProcess.Object,
+               _logger,
+               _metricsLogger,
+               0,
+               _testEnvironment,
+               _hostOptionsMonitor,
+               _sharedMemoryManager,
+               workerConcurrencyOptions);
+
+            // wait 10 seconds
+            await Task.Delay(10000);
+
+            IEnumerable<TimeSpan> latencyHistory = workerChannel.GetLatencies();
+
+            Assert.True(latencyHistory.Count() == 0);
         }
 
         private IEnumerable<FunctionMetadata> GetTestFunctionsList(string runtime)

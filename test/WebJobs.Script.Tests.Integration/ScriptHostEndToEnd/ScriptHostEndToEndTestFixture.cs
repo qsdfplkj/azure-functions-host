@@ -41,10 +41,10 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
         private readonly bool _startHost;
         private readonly ICollection<string> _functions;
         private readonly string _functionsWorkerLanguage;
-        private readonly IOptions<WorkerConcurrencyOptions> _concurrencyOptions;
+        private readonly IOptions<WorkerConcurrencyOptions> _workerConcurrencyOptions;
 
         protected ScriptHostEndToEndTestFixture(string rootPath, string testId, string functionsWorkerLanguage, ProxyClientExecutor proxyClient = null,
-            bool startHost = true, ICollection<string> functions = null, IOptions<WorkerConcurrencyOptions> concurrencyOptions = null)
+            bool startHost = true, ICollection<string> functions = null, IOptions<WorkerConcurrencyOptions> workerConcurrencyOptions = null)
         {
             _settingsManager = ScriptSettingsManager.Instance;
             FixtureId = testId;
@@ -58,7 +58,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
             _startHost = startHost;
             _functions = functions;
             _functionsWorkerLanguage = functionsWorkerLanguage;
-            _concurrencyOptions = concurrencyOptions;
+            _workerConcurrencyOptions = workerConcurrencyOptions;
         }
 
         public TestLoggerProvider LoggerProvider { get; }
@@ -144,9 +144,9 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                        }
                    });
 
-                   if (_concurrencyOptions != null)
+                   if (_workerConcurrencyOptions != null)
                    {
-                       services.AddSingleton<IOptions<WorkerConcurrencyOptions>>(_concurrencyOptions);
+                       services.AddSingleton<IOptions<WorkerConcurrencyOptions>>(_workerConcurrencyOptions);
                    }
 
                    if (_proxyClient != null)
@@ -164,7 +164,7 @@ namespace Microsoft.Azure.WebJobs.Script.Tests
                        services.AddSingleton<IMemoryMappedFileAccessor, MemoryMappedFileAccessorUnix>();
                    }
                    services.AddSingleton<ISharedMemoryManager, SharedMemoryManager>();
-                   if (_concurrencyOptions != null)
+                   if (_workerConcurrencyOptions != null)
                    {
                        services.AddSingleton<IScriptEventManager, WorkerConcurancyManagerEndToEndTests.TestScriptEventManager>();
                    }
