@@ -40,13 +40,14 @@
       "assemblyName": "Microsoft.Azure.WebJobs.Extensions.DurableTask",
       "packageName": "Microsoft.Azure.WebJobs.Extensions.DurableTask",
       "minimumAssemblyVersion": "2.0.0.0",
+      "minimumAssemblyFileVersion": "2.5.0",
       "minimumPackageVersion": "2.5.0"
     },
     {
       "name": "EventGridWebJobsStartup",
       "assemblyName": "Microsoft.Azure.WebJobs.Extensions.EventGrid",
       "packageName": "Microsoft.Azure.WebJobs.Extensions.EventGrid",
-      "minimumAssemblyVersion": "2.0.0.0",
+      "minimumAssemblyVersion": "2.1.0.0",
       "minimumPackageVersion": "2.1.0"
     },
     {

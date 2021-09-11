@@ -246,6 +246,14 @@ namespace Microsoft.Azure.WebJobs.Script.DependencyInjection
         private void ValidateExtensionRequirements(List<Type> startupTypes)
         {
             var errors = new List<string>();
+
+            void CollectError(Type extensionType, Version minimumVersion, ExtensionStartupTypeRequirement requirement)
+            {
+                _logger.MinimumExtensionVersionNotSatisfied(extensionType.Name, extensionType.Assembly.FullName, minimumVersion, requirement.PackageName, requirement.MinimumPackageVersion);
+                string requirementNotMetError = $"ExtensionStartupType {extensionType.Name} from assembly '{extensionType.Assembly.FullName}' does not meet the required minimum version of {minimumVersion}. Update your NuGet package reference for {requirement.PackageName} to {requirement.MinimumPackageVersion} or later.";
+                errors.Add(requirementNotMetError);
+            }
+
             foreach (var extensionType in startupTypes)
             {
                 if (_extensionRequirements.ExtensionRequirementsByStartupType.ContainsKey(extensionType.Name))
@@ -262,11 +270,20 @@ namespace Microsoft.Azure.WebJobs.Script.DependencyInjection
                         continue;
                     }
 
+                    if (requirement.MinimumAssemblyFileVersion != null)
+                    {
+                        Version minimumAssemblyFileVersion = new Version(requirement.MinimumAssemblyFileVersion);
+                        Version extensionAssemblyFileVersion = new Version(System.Diagnostics.FileVersionInfo.GetVersionInfo(extensionType.Assembly.Location).FileVersion);
+                        if (extensionAssemblyFileVersion < minimumAssemblyFileVersion)
+                        {
+                            CollectError(extensionType, minimumAssemblyFileVersion, requirement);
+                            continue;
+                        }
+                    }
+
                     if (extensionAssemblyVersion < minimumAssemblyVersion)
                     {
-                        _logger.MinimumExtensionVersionNotSatisfied(extensionType.Name, extensionType.Assembly.FullName, minimumAssemblyVersion, requirement.PackageName, requirement.MinimumPackageVersion);
-                        string requirementNotMetError = $"ExtensionStartupType {extensionType.Name} from assembly '{extensionType.Assembly.FullName}' does not meet the required minimum version of {minimumAssemblyVersion}. Update your NuGet package reference for {requirement.PackageName} to {requirement.MinimumPackageVersion} or later.";
-                        errors.Add(requirementNotMetError);
+                        CollectError(extensionType, minimumAssemblyVersion, requirement);
                     }
                 }
             }
