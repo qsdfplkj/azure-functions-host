@@ -273,10 +273,19 @@ namespace Microsoft.Azure.WebJobs.Script.DependencyInjection
                     if (requirement.MinimumAssemblyFileVersion != null)
                     {
                         Version minimumAssemblyFileVersion = new Version(requirement.MinimumAssemblyFileVersion);
-                        Version extensionAssemblyFileVersion = new Version(System.Diagnostics.FileVersionInfo.GetVersionInfo(extensionType.Assembly.Location).FileVersion);
-                        if (extensionAssemblyFileVersion < minimumAssemblyFileVersion)
+
+                        try
                         {
-                            CollectError(extensionType, minimumAssemblyFileVersion, requirement);
+                            Version extensionAssemblyFileVersion = new Version(System.Diagnostics.FileVersionInfo.GetVersionInfo(extensionType.Assembly.Location).FileVersion);
+                            if (extensionAssemblyFileVersion < minimumAssemblyFileVersion)
+                            {
+                                CollectError(extensionType, minimumAssemblyFileVersion, requirement);
+                                continue;
+                            }
+                        }
+                        catch (FormatException)
+                        {
+                            // We failed to parse the assembly file version as a Version. We can't do a version check - give up
                             continue;
                         }
                     }
